@@ -66,21 +66,21 @@ function setupRealtimeListeners() {
             updateAgendaDisplay();
             updateAdminStats();
         }, (error) => {
-            console.error("Erro ao escutar registrations:", error);
+            console.warn("Permissão insuficiente ao escutar 'registrations'. Verifique as regras do Firestore.");
         });
 
         db.collection('ranking').onSnapshot((snapshot) => {
             ranking = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             displayRanking();
         }, (error) => {
-            console.error("Erro ao escutar ranking:", error);
+            console.warn("Permissão insuficiente ao escutar 'ranking'. Verifique as regras do Firestore.");
         });
 
         db.collection('results').onSnapshot((snapshot) => {
             results = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             displayTabelas();
         }, (error) => {
-            console.error("Erro ao escutar results:", error);
+            console.warn("Permissão insuficiente ao escutar 'results'. Verifique as regras do Firestore.");
         });
     } else {
         console.warn('Listeners em tempo real desativados: Firebase não configurado.');
@@ -697,36 +697,4 @@ async function updateRanking(event) {
     }
 }
 
-// CONFIGURAÇÃO DO WEBHOOK MERCADO PAGO
-function setupMercadoPagoWebhook() {
-    console.log(`
-🔗 CONFIGURAÇÃO DO WEBHOOK MERCADO PAGO:
-
-📍 URL DO WEBHOOK:
-https://seu-dominio.com/webhook/mercadopago
-(Substitua pelo seu domínio real)
-
-🔧 VERSÃO DA API:
-v1 (Versão atual)
-
-🔑 TOKEN DE AUTENTICAÇÃO:
-Configure no painel do Mercado Pago
-
-📋 CONFIGURAÇÃO NO PAINEL MERCADO PAGO:
-1. Acesse: https://www.mercadopago.com.br/developers/panel
-2. Vá para "Notificações Webhook"
-3. Adicione a URL: https://seu-dominio.com/webhook/mercadopago
-4. Selecione os eventos de pagamento
-5. Salve a configuração
-
-📝 EVENTOS DISPONÍVEIS:
-- payment.created
-- payment.updated
-- payment.approved
-- payment.rejected
-- payment.cancelled
-    `);
-}
-
-// Initialize webhook configuration
-setupMercadoPagoWebhook();
+// Logs de configuração do webhook do Mercado Pago removidos para produção
