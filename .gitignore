@@ -1,33 +1,21 @@
-# Arquivos de configuração local
-.env
-.env.local
-.env.production
+# Dependencies and build outputs
+node_modules/
+dist/
+.build/
+.tmp/
 
-# Logs
-*.log
+# Logs and OS files
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# Arquivos temporários
-*.tmp
-*.temp
+*.log
 .DS_Store
 Thumbs.db
 
-# IDEs
+# Env and secrets
+.env
+.env.*
+
+# Editor folders
 .vscode/
 .idea/
-*.swp
-*.swo
-
-# Node modules (se houver)
-node_modules/
-
-# Build files
-dist/
-build/
-
-# Arquivos de backup
-*.bak
-*.backup

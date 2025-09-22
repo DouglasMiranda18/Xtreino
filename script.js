@@ -1,23 +1,34 @@
-// Firebase Configuration - CONFIGURE SUAS CREDENCIAIS AQUI
+// Firebase Configuration - CONFIGURADO
 const firebaseConfig = {
-    apiKey: "SUA_API_KEY_AQUI",
-    authDomain: "seu-projeto.firebaseapp.com",
-    projectId: "seu-projeto-id",
-    storageBucket: "seu-projeto.appspot.com",
-    messagingSenderId: "123456789",
-    appId: "seu-app-id"
+    apiKey: "AIzaSyANtE6Xd-_SdV0AOZ52T7MXEJ0a-Cksj4w",
+    authDomain: "supernatural-51e12.firebaseapp.com",
+    projectId: "supernatural-51e12",
+    storageBucket: "supernatural-51e12.firebasestorage.app",
+    messagingSenderId: "1030063599704",
+    appId: "1:1030063599704:web:aff395634cf9828cd2da2d",
+    measurementId: "G-WYXXRKDZ7X"
 };
 
 // Mercado Pago Configuration - CONFIGURE SUAS CREDENCIAIS AQUI
 const MERCADO_PAGO_ACCESS_TOKEN = "SEU_ACCESS_TOKEN_AQUI";
-const MERCADO_PAGO_BASE_URL = "https://api.mercadopago.com/v1";
+const MERCADO_PAGO_BASE_URL = "https://api.mercadopago.com"; // base API
 
 // Initialize Firebase
 let db;
+const isPlaceholderFirebaseConfig = (
+    !firebaseConfig ||
+    firebaseConfig.projectId === 'seu-projeto-id' ||
+    firebaseConfig.apiKey === 'SUA_API_KEY_AQUI'
+);
+
 try {
-    firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore();
-    console.log("Firebase conectado com sucesso!");
+    if (isPlaceholderFirebaseConfig) {
+        console.warn('Firebase não configurado: substitua as credenciais em script.js. Conexões foram desativadas para evitar erros.');
+    } else {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        console.log("Firebase conectado com sucesso!");
+    }
 } catch (error) {
     console.error("Erro ao conectar Firebase:", error);
     showNotification("Erro ao conectar com o banco de dados", "error");
@@ -71,6 +82,8 @@ function setupRealtimeListeners() {
         }, (error) => {
             console.error("Erro ao escutar results:", error);
         });
+    } else {
+        console.warn('Listeners em tempo real desativados: Firebase não configurado.');
     }
 }
 
@@ -210,6 +223,10 @@ function closeRegistrationModal() {
 
 async function registerTeam(event) {
     event.preventDefault();
+    if (!db) {
+        showNotification('Backend não configurado. Configure o Firebase antes de continuar.', 'error');
+        return;
+    }
     
     const teamName = document.getElementById('teamName').value.trim();
     const teamPhone = document.getElementById('teamPhone').value.trim();
@@ -294,6 +311,10 @@ async function registerTeam(event) {
 }
 
 async function createMercadoPagoPayment(data) {
+    if (!MERCADO_PAGO_ACCESS_TOKEN || MERCADO_PAGO_ACCESS_TOKEN === 'SEU_ACCESS_TOKEN_AQUI') {
+        console.warn('Mercado Pago não configurado: defina MERCADO_PAGO_ACCESS_TOKEN.');
+        return { success: false, error: 'Mercado Pago não configurado' };
+    }
     try {
         // Create preference for Mercado Pago
         const preferenceData = {
@@ -322,7 +343,7 @@ async function createMercadoPagoPayment(data) {
             }
         };
 
-        const response = await fetch(`${MERCADO_PAGO_BASE_URL}/preferences`, {
+        const response = await fetch(`${MERCADO_PAGO_BASE_URL}/checkout/preferences`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -549,6 +570,10 @@ function loadAdminInscricoes() {
 }
 
 async function confirmPayment(registrationId) {
+    if (!db) {
+        showNotification('Backend não configurado. Configure o Firebase.', 'error');
+        return;
+    }
     try {
         await db.collection('registrations').doc(registrationId).update({
             status: 'confirmed'
@@ -561,6 +586,10 @@ async function confirmPayment(registrationId) {
 }
 
 async function removeRegistration(registrationId) {
+    if (!db) {
+        showNotification('Backend não configurado. Configure o Firebase.', 'error');
+        return;
+    }
     if (confirm('Tem certeza que deseja remover esta inscrição?')) {
         try {
             await db.collection('registrations').doc(registrationId).delete();
@@ -581,6 +610,10 @@ function populateResultSchedules() {
 
 async function launchResult(event) {
     event.preventDefault();
+    if (!db) {
+        showNotification('Backend não configurado. Configure o Firebase.', 'error');
+        return;
+    }
     
     const schedule = document.getElementById('resultSchedule').value;
     const map = document.getElementById('resultMap').value;
@@ -632,6 +665,10 @@ async function launchResult(event) {
 
 async function updateRanking(event) {
     event.preventDefault();
+    if (!db) {
+        showNotification('Backend não configurado. Configure o Firebase.', 'error');
+        return;
+    }
     
     const teamName = document.getElementById('rankingTeam').value;
     const points = parseInt(document.getElementById('rankingPoints').value);
