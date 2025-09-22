@@ -10,7 +10,7 @@ const firebaseConfig = {
 };
 
 // Mercado Pago Configuration - CONFIGURE SUAS CREDENCIAIS AQUI
-const MERCADO_PAGO_ACCESS_TOKEN = "SEU_ACCESS_TOKEN_AQUI";
+const MERCADO_PAGO_ACCESS_TOKEN = "APP_USR-2213099347690266-092212-ea57e6a3c5868f4d00fdd302c7bcb537-2018162925";
 const MERCADO_PAGO_BASE_URL = "https://api.mercadopago.com"; // base API
 
 // Initialize Firebase
