@@ -48,6 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadRanking();
     showSection('agenda');
     setupRealtimeListeners();
+    handleMercadoPagoReturn();
 });
 
 function setupEventListeners() {
@@ -293,6 +294,7 @@ async function registerTeam(event) {
         });
 
         if (paymentData.success) {
+            try { localStorage.setItem('lastRegistrationId', registrationId); } catch(_) {}
             // Update registration with payment info, se possível
             try {
                 if (db && !registrationId.startsWith('local-')) {
@@ -328,6 +330,7 @@ async function createMercadoPagoPayment(data) {
     }
     try {
         // Create preference for Mercado Pago
+        const baseReturnUrl = window.location.origin + window.location.pathname;
         const preferenceData = {
             items: [
                 {
@@ -338,11 +341,10 @@ async function createMercadoPagoPayment(data) {
                 }
             ],
             external_reference: data.externalReference,
-            notification_url: "https://seu-dominio.com/webhook/mercadopago",
             back_urls: {
-                success: "https://seu-dominio.com/success",
-                failure: "https://seu-dominio.com/failure",
-                pending: "https://seu-dominio.com/pending"
+                success: `${baseReturnUrl}?mp=success`,
+                failure: `${baseReturnUrl}?mp=failure`,
+                pending: `${baseReturnUrl}?mp=pending`
             },
             auto_return: "approved",
             payer: {
@@ -415,6 +417,27 @@ function showPaymentModal(payment) {
 
 function closePaymentModal() {
     document.getElementById('paymentModal').classList.add('hidden');
+}
+
+function handleMercadoPagoReturn() {
+    const params = new URLSearchParams(window.location.search);
+    const mp = params.get('mp');
+    if (!mp) return;
+
+    const lastRegistrationId = (() => { try { return localStorage.getItem('lastRegistrationId'); } catch(_) { return null; } })();
+    if (mp === 'success') {
+        showNotification('Pagamento aprovado! Sua inscrição foi confirmada.', 'success');
+        if (db && lastRegistrationId && !lastRegistrationId.startsWith('local-')) {
+            db.collection('registrations').doc(lastRegistrationId).update({ status: 'confirmed' }).catch(() => {});
+        }
+    } else if (mp === 'pending') {
+        showNotification('Pagamento pendente. Assim que aprovar, confirmaremos sua vaga.', 'info');
+    } else if (mp === 'failure') {
+        showNotification('Pagamento não aprovado. Tente novamente.', 'error');
+    }
+    try { localStorage.removeItem('lastRegistrationId'); } catch(_) {}
+    const cleanUrl = window.location.origin + window.location.pathname + window.location.hash;
+    window.history.replaceState({}, document.title, cleanUrl);
 }
 
 function loadRanking() {
