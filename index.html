@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HARDKILLS X-Treino - Sistema Profissional de Torneios</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --orange: #FF6B35;
+            --dark-orange: #E55A2B;
+            --black: #0A0A0A;
+            --dark-gray: #1A1A1A;
+            --medium-gray: #2D2D2D;
+            --light-gray: #F8F9FA;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, var(--orange) 0%, var(--dark-orange) 100%);
+        }
+        
+        .gradient-dark {
+            background: linear-gradient(135deg, var(--black) 0%, var(--dark-gray) 100%);
+        }
+        
+        .card-hover {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(20px);
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-12px) scale(1.02);
+            box-shadow: 0 32px 64px -12px rgba(255, 107, 53, 0.4);
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+        
+        .glow-effect {
+            box-shadow: 0 0 30px rgba(255, 107, 53, 0.4);
+        }
+        
+        .text-gradient {
+            background: linear-gradient(135deg, var(--orange), var(--dark-orange));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .neon-border {
+            border: 2px solid var(--orange);
+            box-shadow: 0 0 20px rgba(255, 107, 53, 0.6), inset 0 0 20px rgba(255, 107, 53, 0.1);
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0A0A0A 0%, #1A1A1A 50%, #2D2D2D 100%);
+            min-height: 100vh;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        .logo-text {
+            font-family: 'Arial Black', sans-serif;
+            font-weight: 900;
+            letter-spacing: 3px;
+        }
+        
+        .loading-spinner {
+            border: 3px solid rgba(255, 107, 53, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid var(--orange);
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .status-confirmed {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        
+        .status-pending {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+        
+        .status-processing {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        
+        .payment-modal {
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            color: white;
+            font-weight: 600;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification.success {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+        }
+        
+        .notification.error {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+        
+        .notification.info {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Navigation -->
+    <nav class="gradient-dark text-white shadow-2xl relative overflow-hidden sticky top-0 z-40">
+        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-orange-500/10 to-transparent"></div>
+        <div class="container mx-auto px-6 py-6 relative z-10">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <!-- HARDKILLS Logo -->
+                    <div class="flex items-center space-x-4">
+                        <div class="relative">
+                            <div class="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center glow-effect">
+                                <i class="fas fa-crosshairs text-white text-2xl"></i>
+                            </div>
+                            <div class="absolute -top-1 -right-1 w-5 h-5 bg-white rounded-full flex items-center justify-center">
+                                <div class="w-2.5 h-2.5 bg-orange-500 rounded-full pulse-animation"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <h1 class="text-4xl font-black logo-text text-gradient">HARDKILLS</h1>
+                            <p class="text-xs text-gray-400 tracking-widest font-semibold">X-TREINO PROFESSIONAL</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="hidden lg:flex space-x-8">
+                    <button onclick="showSection('agenda')" class="nav-btn relative px-6 py-3 text-white hover:text-orange-400 transition-all duration-300 font-bold uppercase tracking-wider">
+                        <i class="fas fa-calendar-alt mr-2"></i>AGENDA
+                    </button>
+                    <button onclick="showSection('ranking')" class="nav-btn relative px-6 py-3 text-white hover:text-orange-400 transition-all duration-300 font-bold uppercase tracking-wider">
+                        <i class="fas fa-trophy mr-2"></i>RANKING
+                    </button>
+                    <button onclick="showSection('tabelas')" class="nav-btn relative px-6 py-3 text-white hover:text-orange-400 transition-all duration-300 font-bold uppercase tracking-wider">
+                        <i class="fas fa-table mr-2"></i>RESULTADOS
+                    </button>
+                    <button onclick="showSection('regras')" class="nav-btn relative px-6 py-3 text-white hover:text-orange-400 transition-all duration-300 font-bold uppercase tracking-wider">
+                        <i class="fas fa-book mr-2"></i>REGRAS
+                    </button>
+                    <button onclick="showSection('admin')" class="nav-btn relative px-6 py-3 text-white hover:text-orange-400 transition-all duration-300 font-bold uppercase tracking-wider">
+                        <i class="fas fa-shield-alt mr-2"></i>ADMIN
+                    </button>
+                </div>
+                
+                <button id="mobileMenuBtn" class="lg:hidden bg-orange-500 hover:bg-orange-600 p-3 rounded-xl transition-colors glow-effect">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+            </div>
+            
+            <!-- Mobile Menu -->
+            <div id="mobileMenu" class="hidden lg:hidden mt-6 space-y-3">
+                <button onclick="showSection('agenda')" class="block w-full text-left py-4 px-6 hover:bg-orange-500/20 rounded-xl transition-colors font-bold uppercase tracking-wider">
+                    <i class="fas fa-calendar-alt mr-3"></i>AGENDA
+                </button>
+                <button onclick="showSection('ranking')" class="block w-full text-left py-4 px-6 hover:bg-orange-500/20 rounded-xl transition-colors font-bold uppercase tracking-wider">
+                    <i class="fas fa-trophy mr-3"></i>RANKING
+                </button>
+                <button onclick="showSection('tabelas')" class="block w-full text-left py-4 px-6 hover:bg-orange-500/20 rounded-xl transition-colors font-bold uppercase tracking-wider">
+                    <i class="fas fa-table mr-3"></i>RESULTADOS
+                </button>
+                <button onclick="showSection('regras')" class="block w-full text-left py-4 px-6 hover:bg-orange-500/20 rounded-xl transition-colors font-bold uppercase tracking-wider">
+                    <i class="fas fa-book mr-3"></i>REGRAS
+                </button>
+                <button onclick="showSection('admin')" class="block w-full text-left py-4 px-6 hover:bg-orange-500/20 rounded-xl transition-colors font-bold uppercase tracking-wider">
+                    <i class="fas fa-shield-alt mr-3"></i>ADMIN
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-12">
+        <!-- Agenda Section -->
+        <div id="agendaSection" class="section">
+            <!-- Hero Section -->
+            <div class="text-center mb-16">
+                <h2 class="text-6xl font-black text-white mb-6">
+                    <span class="text-gradient">AGENDA</span> DE TREINOS
+                </h2>
+                <p class="text-2xl text-gray-300 max-w-3xl mx-auto mb-8">
+                    Escolha seu horário e domine as quedas! 3 mapas por sessão, até 12 times por sala.
+                </p>
+                <div class="flex justify-center space-x-12 text-lg text-gray-400">
+                    <div class="flex items-center">
+                        <i class="fas fa-users mr-3 text-orange-500 text-xl"></i>
+                        <span class="font-semibold">Máx. 12 times</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-map mr-3 text-orange-500 text-xl"></i>
+                        <span class="font-semibold">3 quedas</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-money-bill mr-3 text-orange-500 text-xl"></i>
+                        <span class="font-semibold">R$ 0,50</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8" id="agendaGrid">
+                <!-- Agenda items will be populated here -->
+            </div>
+        </div>
+
+        <!-- Registration Modal -->
+        <div id="registrationModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+            <div class="glass-effect rounded-3xl max-w-lg w-full p-10 neon-border">
+                <div class="flex justify-between items-center mb-8">
+                    <h3 class="text-3xl font-black text-white">
+                        <span class="text-gradient">INSCREVER</span> TIME
+                    </h3>
+                    <button onclick="closeRegistrationModal()" class="text-gray-400 hover:text-orange-500 transition-colors text-2xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <form id="registrationForm" onsubmit="registerTeam(event)">
+                    <div class="mb-8">
+                        <label class="block text-orange-400 text-sm font-bold mb-4 uppercase tracking-wider">Nome do Time</label>
+                        <input type="text" id="teamName" required class="w-full px-6 py-4 bg-black/50 border border-gray-600 rounded-xl focus:outline-none focus:border-orange-500 text-white placeholder-gray-400 transition-colors text-lg">
+                    </div>
+                    <div class="mb-8">
+                        <label class="block text-orange-400 text-sm font-bold mb-4 uppercase tracking-wider">WhatsApp</label>
+                        <input type="tel" id="teamPhone" required class="w-full px-6 py-4 bg-black/50 border border-gray-600 rounded-xl focus:outline-none focus:border-orange-500 text-white placeholder-gray-400 transition-colors text-lg" placeholder="(11) 99999-9999">
+                    </div>
+                    <div class="mb-8">
+                        <label class="block text-orange-400 text-sm font-bold mb-4 uppercase tracking-wider">Email</label>
+                        <input type="email" id="teamEmail" required class="w-full px-6 py-4 bg-black/50 border border-gray-600 rounded-xl focus:outline-none focus:border-orange-500 text-white placeholder-gray-400 transition-colors text-lg" placeholder="time@exemplo.com">
+                    </div>
+                    <div class="mb-8 p-6 bg-black/30 rounded-xl border border-gray-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-gray-300 font-semibold">Horário:</span>
+                            <span id="selectedTime" class="font-bold text-orange-400 text-lg"></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-300 font-semibold">Valor:</span>
+                            <span class="font-black text-green-400 text-2xl">R$ 0,50</span>
+                        </div>
+                    </div>
+                    <div class="flex space-x-4">
+                        <button type="button" onclick="closeRegistrationModal()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-4 px-6 rounded-xl transition-colors font-bold uppercase tracking-wider">
+                            CANCELAR
+                        </button>
+                        <button type="submit" id="registerBtn" class="flex-1 gradient-bg hover:from-orange-600 hover:to-red-600 text-white py-4 px-6 rounded-xl transition-all font-bold uppercase tracking-wider glow-effect">
+                            <span id="registerBtnText">INSCREVER</span>
+                            <div id="registerBtnSpinner" class="loading-spinner hidden mx-auto"></div>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Payment Modal -->
+        <div id="paymentModal" class="fixed inset-0 payment-modal hidden z-50 flex items-center justify-center p-4">
+            <div class="glass-effect rounded-3xl max-w-md w-full p-10 neon-border">
+                <div class="text-center mb-8">
+                    <div class="w-20 h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-6 glow-effect">
+                        <i class="fas fa-check text-white text-3xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-black text-white mb-4">
+                        <span class="text-gradient">INSCRIÇÃO</span> REALIZADA!
+                    </h3>
+                    <p class="text-gray-300 mb-6">Para confirmar sua vaga, realize o pagamento de <strong class="text-green-400">R$ 0,50</strong></p>
+                </div>
+                
+                <div id="paymentContent" class="space-y-6">
+                    <!-- Payment content will be populated here -->
+                </div>
+                
+                <div class="mt-8 text-center">
+                    <button onclick="closePaymentModal()" class="bg-gray-700 hover:bg-gray-600 text-white py-3 px-8 rounded-xl transition-colors font-bold uppercase tracking-wider">
+                        FECHAR
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ranking Section -->
+        <div id="rankingSection" class="section hidden">
+            <div class="text-center mb-16">
+                <h2 class="text-6xl font-black text-white mb-6">
+                    <span class="text-gradient">RANKING</span> MENSAL
+                </h2>
+                <p class="text-2xl text-gray-300">Os melhores times do mês em destaque</p>
+            </div>
+            
+            <div class="glass-effect rounded-3xl p-10 neon-border">
+                <div class="overflow-x-auto">
+                    <table class="w-full table-auto">
+                        <thead>
+                            <tr class="border-b-2 border-gray-600">
+                                <th class="px-8 py-6 text-left text-orange-400 font-black uppercase tracking-wider text-lg">Posição</th>
+                                <th class="px-8 py-6 text-left text-orange-400 font-black uppercase tracking-wider text-lg">Time</th>
+                                <th class="px-8 py-6 text-left text-orange-400 font-black uppercase tracking-wider text-lg">Pontos</th>
+                                <th class="px-8 py-6 text-left text-orange-400 font-black uppercase tracking-wider text-lg">Vitórias</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rankingTable">
+                            <!-- Ranking data will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabelas Section -->
+        <div id="tabelasSection" class="section hidden">
+            <div class="text-center mb-16">
+                <h2 class="text-6xl font-black text-white mb-6">
+                    <span class="text-gradient">RESULTADOS</span> DAS QUEDAS
+                </h2>
+                <p class="text-2xl text-gray-300">Acompanhe os resultados em tempo real</p>
+            </div>
+            
+            <div class="mb-10">
+                <select id="tabelaFilter" onchange="filterTabelas()" class="bg-black/50 border border-gray-600 rounded-xl px-8 py-4 text-white focus:outline-none focus:border-orange-500 transition-colors text-lg font-semibold">
+                    <option value="">Todos os horários</option>
+                </select>
+            </div>
+            
+            <div id="tabelasContent">
+                <!-- Tables content will be populated here -->
+            </div>
+        </div>
+
+        <!-- Regras Section -->
+        <div id="regrasSection" class="section hidden">
+            <div class="text-center mb-16">
+                <h2 class="text-6xl font-black text-white mb-6">
+                    <span class="text-gradient">REGRAS</span> DO X-TREINO
+                </h2>
+                <p class="text-2xl text-gray-300">Tudo que você precisa saber para participar</p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                <div class="glass-effect rounded-3xl p-10 neon-border">
+                    <h3 class="text-3xl font-black text-orange-400 mb-8 flex items-center">
+                        <i class="fas fa-trophy mr-4"></i>
+                        FORMATO DO TORNEIO
+                    </h3>
+                    <ul class="space-y-4 text-gray-300 text-lg">
+                        <li class="flex items-center"><i class="fas fa-map text-orange-500 mr-4"></i>3 quedas por horário: Bermuda, Purgatório e Kalahari</li>
+                        <li class="flex items-center"><i class="fas fa-users text-orange-500 mr-4"></i>Máximo de 12 times por sala</li>
+                        <li class="flex items-center"><i class="fas fa-clock text-orange-500 mr-4"></i>Horários: 19h, 20h, 21h, 22h e 23h</li>
+                        <li class="flex items-center"><i class="fas fa-calendar text-orange-500 mr-4"></i>Dias: Segunda a Sábado</li>
+                    </ul>
+                </div>
+                
+                <div class="glass-effect rounded-3xl p-10 neon-border">
+                    <h3 class="text-3xl font-black text-orange-400 mb-8 flex items-center">
+                        <i class="fas fa-star mr-4"></i>
+                        SISTEMA DE PONTUAÇÃO
+                    </h3>
+                    <div class="space-y-4 text-gray-300">
+                        <div class="flex justify-between items-center p-4 bg-black/30 rounded-xl">
+                            <span class="text-lg">🥇 1º lugar:</span><span class="text-yellow-400 font-black text-xl">10 pontos</span>
+                        </div>
+                        <div class="flex justify-between items-center p-4 bg-black/30 rounded-xl">
+                            <span class="text-lg">🥈 2º lugar:</span><span class="text-gray-400 font-black text-xl">6 pontos</span>
+                        </div>
+                        <div class="flex justify-between items-center p-4 bg-black/30 rounded-xl">
+                            <span class="text-lg">🥉 3º lugar:</span><span class="text-orange-400 font-black text-xl">4 pontos</span>
+                        </div>
+                        <div class="flex justify-between items-center p-4 bg-black/30 rounded-xl">
+                            <span class="text-lg">4º lugar:</span><span class="text-blue-400 font-black text-xl">2 pontos</span>
+                        </div>
+                        <div class="flex justify-between items-center p-4 bg-black/30 rounded-xl">
+                            <span class="text-lg">5º lugar:</span><span class="text-green-400 font-black text-xl">1 ponto</span>
+                        </div>
+                        <div class="flex justify-between items-center p-4 bg-black/30 rounded-xl">
+                            <span class="text-lg">💀 Cada kill:</span><span class="text-red-400 font-black text-xl">+1 ponto</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="glass-effect rounded-3xl p-10 neon-border">
+                    <h3 class="text-3xl font-black text-orange-400 mb-8 flex items-center">
+                        <i class="fas fa-money-bill mr-4"></i>
+                        PAGAMENTO
+                    </h3>
+                    <ul class="space-y-4 text-gray-300 text-lg">
+                        <li class="flex items-center"><i class="fas fa-dollar-sign text-green-500 mr-4"></i>Valor: R$ 0,50 por time</li>
+                        <li class="flex items-center"><i class="fab fa-pix text-green-500 mr-4"></i>Pagamento via PIX ou Cartão</li>
+                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-4"></i>Confirmação automática</li>
+                        <li class="flex items-center"><i class="fas fa-shield-alt text-green-500 mr-4"></i>Pagamento seguro via Asaas</li>
+                    </ul>
+                </div>
+                
+                <div class="glass-effect rounded-3xl p-10 neon-border">
+                    <h3 class="text-3xl font-black text-orange-400 mb-8 flex items-center">
+                        <i class="fas fa-headset mr-4"></i>
+                        CONTATO
+                    </h3>
+                    <div class="space-y-6">
+                        <a href="https://wa.me/5511999999999" target="_blank" rel="noopener noreferrer" class="block bg-green-600 hover:bg-green-700 text-white px-8 py-5 rounded-xl transition-colors flex items-center justify-center font-bold text-lg uppercase tracking-wider glow-effect">
+                            <i class="fab fa-whatsapp mr-4 text-2xl"></i>
+                            WHATSAPP
+                        </a>
+                        <a href="https://discord.gg/exemplo" target="_blank" rel="noopener noreferrer" class="block bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-5 rounded-xl transition-colors flex items-center justify-center font-bold text-lg uppercase tracking-wider glow-effect">
+                            <i class="fab fa-discord mr-4 text-2xl"></i>
+                            DISCORD
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Section -->
+        <div id="adminSection" class="section hidden">
+            <div class="text-center mb-16">
+                <h2 class="text-6xl font-black text-white mb-6">
+                    <span class="text-gradient">PAINEL</span> ADMINISTRATIVO
+                </h2>
+                <p class="text-2xl text-gray-300">Controle total do sistema</p>
+            </div>
+            
+            <!-- Admin Login -->
+            <div id="adminLogin" class="mb-12">
+                <div class="max-w-lg mx-auto glass-effect rounded-3xl p-10 neon-border">
+                    <div class="text-center mb-8">
+                        <i class="fas fa-shield-alt text-5xl text-orange-500 mb-6 glow-effect"></i>
+                        <h3 class="text-2xl font-black text-white uppercase tracking-wider">ACESSO RESTRITO</h3>
+                    </div>
+                    <input type="password" id="adminPassword" placeholder="Senha do administrador" class="w-full px-6 py-4 bg-black/50 border border-gray-600 rounded-xl mb-6 text-white placeholder-gray-400 focus:outline-none focus:border-orange-500 transition-colors text-lg">
+                    <button onclick="adminLogin()" class="w-full gradient-bg hover:from-orange-600 hover:to-red-600 text-white py-4 px-6 rounded-xl transition-all font-bold uppercase tracking-wider glow-effect text-lg">
+                        ENTRAR
+                    </button>
+                </div>
+            </div>
+
+            <!-- Admin Panel -->
+            <div id="adminPanel" class="hidden">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+                    <div class="glass-effect rounded-3xl p-8 neon-border">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-bold text-orange-400 mb-3 uppercase tracking-wider text-lg">Inscrições Hoje</h3>
+                                <p class="text-4xl font-black text-white" id="todayRegistrations">0</p>
+                            </div>
+                            <i class="fas fa-user-plus text-4xl text-blue-500"></i>
+                        </div>
+                    </div>
+                    <div class="glass-effect rounded-3xl p-8 neon-border">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-bold text-orange-400 mb-3 uppercase tracking-wider text-lg">Pagamentos Confirmados</h3>
+                                <p class="text-4xl font-black text-white" id="confirmedPayments">0</p>
+                            </div>
+                            <i class="fas fa-check-circle text-4xl text-green-500"></i>
+                        </div>
+                    </div>
+                    <div class="glass-effect rounded-3xl p-8 neon-border">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-bold text-orange-400 mb-3 uppercase tracking-wider text-lg">Receita do Mês</h3>
+                                <p class="text-4xl font-black text-white" id="monthlyRevenue">R$ 0</p>
+                            </div>
+                            <i class="fas fa-dollar-sign text-4xl text-yellow-500"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Tabs -->
+                <div class="border-b-2 border-gray-600 mb-10">
+                    <nav class="-mb-px flex space-x-12">
+                        <button onclick="showAdminTab('inscricoes')" class="admin-tab-btn border-b-4 border-orange-500 text-orange-400 py-4 px-6 font-black uppercase tracking-wider text-lg">
+                            INSCRIÇÕES
+                        </button>
+                        <button onclick="showAdminTab('resultados')" class="admin-tab-btn border-b-4 border-transparent text-gray-400 hover:text-orange-400 py-4 px-6 font-black uppercase tracking-wider text-lg transition-colors">
+                            RESULTADOS
+                        </button>
+                        <button onclick="showAdminTab('ranking-admin')" class="admin-tab-btn border-b-4 border-transparent text-gray-400 hover:text-orange-400 py-4 px-6 font-black uppercase tracking-wider text-lg transition-colors">
+                            RANKING
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Inscricoes Tab -->
+                <div id="adminInscricoes" class="admin-tab-content">
+                    <div class="glass-effect rounded-3xl p-8 neon-border overflow-x-auto">
+                        <table class="w-full table-auto">
+                            <thead>
+                                <tr class="border-b-2 border-gray-600">
+                                    <th class="px-6 py-4 text-left text-orange-400 font-black uppercase tracking-wider">Time</th>
+                                    <th class="px-6 py-4 text-left text-orange-400 font-black uppercase tracking-wider">WhatsApp</th>
+                                    <th class="px-6 py-4 text-left text-orange-400 font-black uppercase tracking-wider">Email</th>
+                                    <th class="px-6 py-4 text-left text-orange-400 font-black uppercase tracking-wider">Horário</th>
+                                    <th class="px-6 py-4 text-left text-orange-400 font-black uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-4 text-left text-orange-400 font-black uppercase tracking-wider">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminInscricoesTable" class="text-white">
+                                <!-- Admin inscricoes data will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Resultados Tab -->
+                <div id="adminResultados" class="admin-tab-content hidden">
+                    <div class="glass-effect rounded-3xl p-8 neon-border mb-8">
+                        <h3 class="text-2xl font-black text-orange-400 mb-6 uppercase tracking-wider">Lançar Resultado</h3>
+                        <form onsubmit="launchResult(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                            <select id="resultSchedule" required class="px-4 py-3 bg-black/50 border border-gray-600 rounded-xl text-white focus:outline-none focus:border-orange-500 transition-colors">
+                                <option value="">Selecionar Horário</option>
+                            </select>
+                            <select id="resultMap" required class="px-4 py-3 bg-black/50 border border-gray-600 rounded-xl text-white focus:outline-none focus:border-orange-500 transition-colors">
+                                <option value="">Selecionar Mapa</option>
+                                <option value="Bermuda">Bermuda</option>
+                                <option value="Purgatório">Purgatório</option>
+                                <option value="Kalahari">Kalahari</option>
+                            </select>
+                            <input type="text" id="resultTeam" placeholder="Nome do Time" required class="px-4 py-3 bg-black/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-orange-500 transition-colors">
+                            <input type="number" id="resultPosition" placeholder="Posição" min="1" max="12" required class="px-4 py-3 bg-black/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-orange-500 transition-colors">
+                            <div class="flex space-x-3">
+                                <input type="number" id="resultKills" placeholder="Kills" min="0" required class="flex-1 px-4 py-3 bg-black/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-orange-500 transition-colors">
+                                <button type="submit" class="bg-green-600 text-white px-6 py-3 rounded-xl hover:bg-green-700 transition-colors font-bold">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div id="resultsDisplay">
+                        <!-- Results will be displayed here -->
+                    </div>
+                </div>
+
+                <!-- Ranking Admin Tab -->
+                <div id="adminRankingAdmin" class="admin-tab-content hidden">
+                    <div class="glass-effect rounded-3xl p-8 neon-border">
+                        <h3 class="text-2xl font-black text-orange-400 mb-6 uppercase tracking-wider">Gerenciar Ranking</h3>
+                        <form onsubmit="updateRanking(event)" class="flex space-x-6">
+                            <input type="text" id="rankingTeam" placeholder="Nome do Time" required class="flex-1 px-4 py-3 bg-black/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-orange-500 transition-colors">
+                            <input type="number" id="rankingPoints" placeholder="Pontos" required class="px-4 py-3 bg-black/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-orange-500 transition-colors">
+                            <button type="submit" class="bg-blue-600 text-white px-8 py-3 rounded-xl hover:bg-blue-700 transition-colors font-bold uppercase tracking-wider">
+                                Atualizar
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
