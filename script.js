@@ -12,6 +12,7 @@ const firebaseConfig = {
 // Mercado Pago Configuration - CONFIGURE SUAS CREDENCIAIS AQUI
 const MERCADO_PAGO_ACCESS_TOKEN = "APP_USR-2213099347690266-092212-ea57e6a3c5868f4d00fdd302c7bcb537-2018162925";
 const MERCADO_PAGO_BASE_URL = "https://api.mercadopago.com"; // base API
+const ADMIN_WHATSAPP = "5511999999999"; // Altere para o WhatsApp oficial
 
 // Initialize Firebase
 let db;
@@ -294,6 +295,16 @@ async function registerTeam(event) {
         });
 
         if (paymentData.success) {
+            // Guardar dados para retorno/pós-pagamento (WhatsApp e confirmação)
+            try {
+                localStorage.setItem('lastRegistrationId', registrationId);
+                localStorage.setItem('lastRegistrationData', JSON.stringify({
+                    teamName,
+                    email: teamEmail,
+                    phone: teamPhone,
+                    schedule: currentSchedule
+                }));
+            } catch(_) {}
             try { localStorage.setItem('lastRegistrationId', registrationId); } catch(_) {}
             // Update registration with payment info, se possível
             try {
@@ -425,6 +436,7 @@ function handleMercadoPagoReturn() {
     if (!mp) return;
 
     const lastRegistrationId = (() => { try { return localStorage.getItem('lastRegistrationId'); } catch(_) { return null; } })();
+    const lastRegistrationData = (() => { try { return JSON.parse(localStorage.getItem('lastRegistrationData') || 'null'); } catch(_) { return null; } })();
     if (mp === 'success') {
         showNotification('Pagamento aprovado! Sua inscrição foi confirmada.', 'success');
         if (db && lastRegistrationId && !lastRegistrationId.startsWith('local-')) {
@@ -432,12 +444,44 @@ function handleMercadoPagoReturn() {
         }
     } else if (mp === 'pending') {
         showNotification('Pagamento pendente. Assim que aprovar, confirmaremos sua vaga.', 'info');
+        if (lastRegistrationData) {
+            showPendingConfirmationModal(lastRegistrationData);
+        }
     } else if (mp === 'failure') {
         showNotification('Pagamento não aprovado. Tente novamente.', 'error');
     }
-    try { localStorage.removeItem('lastRegistrationId'); } catch(_) {}
+    try { localStorage.removeItem('lastRegistrationId'); localStorage.removeItem('lastRegistrationData'); } catch(_) {}
     const cleanUrl = window.location.origin + window.location.pathname + window.location.hash;
     window.history.replaceState({}, document.title, cleanUrl);
+}
+
+function showPendingConfirmationModal(regData) {
+    const modal = document.getElementById('paymentModal');
+    const content = document.getElementById('paymentContent');
+
+    const message = `Olá!\nSolicito a confirmação da vaga do X-Treino.\n\nTime: ${regData.teamName}\nEmail: ${regData.email}\nWhatsApp: ${regData.phone}\nHorário: ${regData.schedule}\n\nStatus do pagamento: PENDENTE (aguardando compensação).`;
+    const waUrl = `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(message)}`;
+
+    content.innerHTML = `
+        <div class="text-center space-y-6">
+            <h3 class="text-2xl font-black text-white">
+                Pagamento pendente
+            </h3>
+            <p class="text-gray-300">Envie seus dados no WhatsApp para confirmação da vaga quando o pagamento compensar.</p>
+            <div class="bg-black/30 rounded-xl p-6 text-left">
+                <p class="text-gray-300"><strong>Time:</strong> ${regData.teamName}</p>
+                <p class="text-gray-300"><strong>Email:</strong> ${regData.email}</p>
+                <p class="text-gray-300"><strong>WhatsApp:</strong> ${regData.phone}</p>
+                <p class="text-gray-300"><strong>Horário:</strong> ${regData.schedule}</p>
+            </div>
+            <a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="block gradient-bg hover:from-orange-600 hover:to-red-600 text-white py-4 px-8 rounded-xl transition-all font-bold uppercase tracking-wider glow-effect">
+                Enviar no WhatsApp
+            </a>
+            <p class="text-sm text-gray-400">Sua vaga será <strong>confirmada pelo WhatsApp</strong> após o pagamento ser identificado.</p>
+        </div>
+    `;
+
+    modal.classList.remove('hidden');
 }
 
 function loadRanking() {
