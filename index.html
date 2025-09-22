@@ -306,6 +306,26 @@
             </div>
         </div>
 
+        <!-- Teams Modal -->
+        <div id="teamsModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+            <div class="glass-effect rounded-3xl max-w-lg w-full p-10 neon-border">
+                <div class="flex justify-between items-center mb-8">
+                    <h3 class="text-3xl font-black text-white">
+                        <span class="text-gradient">TIMES</span> CONFIRMADOS
+                    </h3>
+                    <button onclick="closeTeamsModal()" class="text-gray-400 hover:text-orange-500 transition-colors text-2xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="teamsContent" class="space-y-3 max-h-80 overflow-y-auto"></div>
+                <div class="mt-8 text-center">
+                    <button onclick="closeTeamsModal()" class="bg-gray-700 hover:bg-gray-600 text-white py-3 px-8 rounded-xl transition-colors font-bold uppercase tracking-wider">
+                        FECHAR
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Payment Modal -->
         <div id="paymentModal" class="fixed inset-0 payment-modal hidden z-50 flex items-center justify-center p-4">
             <div class="glass-effect rounded-3xl max-w-md w-full p-10 neon-border">

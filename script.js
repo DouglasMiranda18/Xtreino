@@ -176,10 +176,15 @@ function loadAgenda() {
                             <p class="text-sm text-gray-400 uppercase tracking-wider font-semibold">Valor</p>
                             <p class="text-3xl font-black text-green-400">R$ 0,50</p>
                         </div>
-                        <button class="${availableSlots === 0 ? 'bg-gray-600 cursor-not-allowed' : 'gradient-bg hover:from-orange-600 hover:to-red-600 glow-effect'} text-white px-8 py-4 rounded-xl transition-all font-black uppercase tracking-wider text-lg" 
-                                ${availableSlots === 0 ? 'disabled' : ''}>
-                            ${availableSlots === 0 ? 'LOTADO' : 'INSCREVER'}
-                        </button>
+                        <div class="flex space-x-3">
+                            <button onclick="event.stopPropagation(); openTeamsModal('${schedule}')" class="bg-gray-700 hover:bg-gray-600 text-white px-5 py-4 rounded-xl transition-colors font-black uppercase tracking-wider text-sm">
+                                VER TIMES
+                            </button>
+                            <button class="${availableSlots === 0 ? 'bg-gray-600 cursor-not-allowed' : 'gradient-bg hover:from-orange-600 hover:to-red-600 glow-effect'} text-white px-8 py-4 rounded-xl transition-all font-black uppercase tracking-wider text-lg" 
+                                    ${availableSlots === 0 ? 'disabled' : ''}>
+                                ${availableSlots === 0 ? 'LOTADO' : 'INSCREVER'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             `;
@@ -191,6 +196,29 @@ function loadAgenda() {
 
 function updateAgendaDisplay() {
     loadAgenda();
+}
+function openTeamsModal(schedule) {
+    const teams = registrations
+        .filter(reg => reg.schedule === schedule && reg.status === 'confirmed')
+        .map(reg => reg.teamName)
+        .sort((a, b) => a.localeCompare(b));
+
+    const content = document.getElementById('teamsContent');
+    if (!teams.length) {
+        content.innerHTML = `<p class="text-gray-300">Nenhum time confirmado ainda para <strong class="text-orange-400">${schedule}</strong>.</p>`;
+    } else {
+        content.innerHTML = `
+            <p class="text-gray-300 mb-4">Horário: <strong class="text-orange-400">${schedule}</strong></p>
+            <ul class="space-y-2">
+                ${teams.map((name, idx) => `<li class="text-white">${idx + 1}. ${name}</li>`).join('')}
+            </ul>
+        `;
+    }
+    document.getElementById('teamsModal').classList.remove('hidden');
+}
+
+function closeTeamsModal() {
+    document.getElementById('teamsModal').classList.add('hidden');
 }
 
 function openRegistrationModal(schedule) {
