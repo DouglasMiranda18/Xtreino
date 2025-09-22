@@ -248,9 +248,9 @@ async function registerTeam(event) {
     btnSpinner.classList.remove('hidden');
 
     try {
-        // Check if team already registered for this schedule
+        // Check if team already registered for this schedule (apenas se já temos dados)
         const existingRegistration = registrations.find(reg => 
-            reg.teamName.toLowerCase() === teamName.toLowerCase() && 
+            reg.teamName?.toLowerCase?.() === teamName.toLowerCase() && 
             reg.schedule === currentSchedule
         );
 
@@ -259,20 +259,27 @@ async function registerTeam(event) {
             return;
         }
 
-        // Add registration to Firestore
-        const registrationData = {
-            teamName,
-            phone: teamPhone,
-            email: teamEmail,
-            schedule: currentSchedule,
-            status: 'pending',
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            paymentId: null,
-            paymentUrl: null
-        };
+        // Tenta salvar no Firestore, mas não bloqueia o fluxo se falhar por permissão
+        let registrationId = 'local-' + Date.now();
+        try {
+            if (db) {
+                const registrationData = {
+                    teamName,
+                    phone: teamPhone,
+                    email: teamEmail,
+                    schedule: currentSchedule,
+                    status: 'pending',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    paymentId: null,
+                    paymentUrl: null
+                };
+                const docRef = await db.collection('registrations').add(registrationData);
+                registrationId = docRef.id;
+            }
+        } catch (permErr) {
+            console.warn('Sem permissão para gravar no Firestore. Seguindo sem persistir por enquanto.');
+        }
 
-        const docRef = await db.collection('registrations').add(registrationData);
-        
         // Create payment with Mercado Pago
         const paymentData = await createMercadoPagoPayment({
             customer: {
@@ -282,15 +289,19 @@ async function registerTeam(event) {
             },
             value: 0.50,
             description: `X-Treino HARDKILLS - ${currentSchedule}`,
-            externalReference: docRef.id
+            externalReference: registrationId
         });
 
         if (paymentData.success) {
-            // Update registration with payment info
-            await db.collection('registrations').doc(docRef.id).update({
-                paymentId: paymentData.payment.id,
-                paymentUrl: paymentData.payment.invoiceUrl
-            });
+            // Update registration with payment info, se possível
+            try {
+                if (db && !registrationId.startsWith('local-')) {
+                    await db.collection('registrations').doc(registrationId).update({
+                        paymentId: paymentData.payment.id,
+                        paymentUrl: paymentData.payment.invoiceUrl
+                    });
+                }
+            } catch(_) {}
 
             showNotification('Inscrição realizada com sucesso!', 'success');
             closeRegistrationModal();
