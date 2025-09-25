@@ -718,6 +718,32 @@ function renderAdminChartsAndInsights() {
     }).length;
     const todayRevenue = (paidToday * 0.5).toFixed(2);
     if (todayRevenueEl) todayRevenueEl.textContent = `R$ ${todayRevenue}`;
+
+    // Pagamentos por forma (se houver campo paymentMethod em registrations; caso não, usa 'Desconhecido')
+    const methodCounts = {};
+    registrations.forEach(reg => {
+        if (reg.status !== 'confirmed') return;
+        const method = (reg.paymentMethod || 'Desconhecido').toUpperCase();
+        methodCounts[method] = (methodCounts[method] || 0) + 1;
+    });
+    const methodLabels = Object.keys(methodCounts);
+    const methodData = methodLabels.map(m => methodCounts[m]);
+    const ctx2 = document.getElementById('chartByPaymentMethod');
+    if (ctx2 && window.Chart) {
+        if (window._chartByPayment) window._chartByPayment.destroy();
+        window._chartByPayment = new Chart(ctx2, {
+            type: 'doughnut',
+            data: { labels: methodLabels, datasets: [{ data: methodData, backgroundColor: ['#10b981','#3b82f6','#f59e0b','#ef4444','#8b5cf6'] }] },
+            options: { responsive: true }
+        });
+    }
+    const bestMethod = methodLabels.reduce((best, m) => {
+        const v = methodCounts[m];
+        if (!best || v > best.v) return { m, v };
+        return best;
+    }, null);
+    const bestMethodEl = document.getElementById('bestPaymentMethod');
+    if (bestMethodEl) bestMethodEl.textContent = bestMethod ? `${bestMethod.m} (${bestMethod.v})` : '-';
 }
 
 function showAdminTab(tabName) {

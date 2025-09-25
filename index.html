@@ -567,6 +567,17 @@
                         </div>
                     </div>
 
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+                        <div class="glass-effect rounded-3xl p-8 neon-border lg:col-span-2">
+                            <h3 class="text-orange-400 font-black uppercase tracking-wider mb-4">Pagamentos por Forma</h3>
+                            <canvas id="chartByPaymentMethod" height="120"></canvas>
+                        </div>
+                        <div class="glass-effect rounded-3xl p-8 neon-border">
+                            <h3 class="text-orange-400 font-black uppercase tracking-wider mb-4">Forma que Mais Vende</h3>
+                            <p class="text-white text-2xl" id="bestPaymentMethod">-</p>
+                        </div>
+                    </div>
+
                 <!-- Admin Tabs -->
                 <div class="border-b-2 border-gray-600 mb-10">
                     <nav class="-mb-px flex space-x-12">
