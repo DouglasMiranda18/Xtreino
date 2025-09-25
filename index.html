@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HARDKILLS X-Treino - Sistema Profissional de Torneios</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
@@ -535,6 +536,36 @@
                         </div>
                     </div>
                 </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+                        <div class="glass-effect rounded-3xl p-8 neon-border lg:col-span-2">
+                            <h3 class="text-orange-400 font-black uppercase tracking-wider mb-4">Vendas por Horário (Últimos 7 dias)</h3>
+                            <canvas id="chartByHour" height="120"></canvas>
+                        </div>
+                        <div class="glass-effect rounded-3xl p-8 neon-border">
+                            <h3 class="text-orange-400 font-black uppercase tracking-wider mb-4">Dias com Mais Vendas</h3>
+                            <ul id="topDaysList" class="space-y-2 text-white text-sm"></ul>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+                        <div class="glass-effect rounded-3xl p-8 neon-border">
+                            <h3 class="text-orange-400 font-black uppercase tracking-wider mb-4">Conversão</h3>
+                            <ul class="text-white space-y-2 text-sm" id="conversionStats">
+                                <li>Total de inscrições: <span class="text-orange-400 font-bold" id="statTotalRegs">0</span></li>
+                                <li>Pagas: <span class="text-green-400 font-bold" id="statPaid">0</span></li>
+                                <li>Taxa de conversão: <span class="text-blue-400 font-bold" id="statConversion">0%</span></li>
+                            </ul>
+                        </div>
+                        <div class="glass-effect rounded-3xl p-8 neon-border">
+                            <h3 class="text-orange-400 font-black uppercase tracking-wider mb-4">Horário que Mais Vende</h3>
+                            <p class="text-white text-2xl" id="bestHour">-</p>
+                        </div>
+                        <div class="glass-effect rounded-3xl p-8 neon-border">
+                            <h3 class="text-orange-400 font-black uppercase tracking-wider mb-4">Receita Estimada Hoje</h3>
+                            <p class="text-white text-2xl" id="todayRevenue">R$ 0</p>
+                        </div>
+                    </div>
 
                 <!-- Admin Tabs -->
                 <div class="border-b-2 border-gray-600 mb-10">

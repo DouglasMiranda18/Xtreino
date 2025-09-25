@@ -598,7 +598,7 @@ function filterTabelas() {
 // Admin functions
 function adminLogin() {
     const password = document.getElementById('adminPassword').value;
-    if (password === 'hardkills2024') { // Senha mais segura
+    if (password === 'Teste Freitas') { // Nova senha
         isAdminLoggedIn = true;
         document.getElementById('adminLogin').classList.add('hidden');
         document.getElementById('adminPanel').classList.remove('hidden');
@@ -613,6 +613,7 @@ function loadAdminData() {
     updateAdminStats();
     loadAdminInscricoes();
     populateResultSchedules();
+    renderAdminChartsAndInsights();
 }
 
 function updateAdminStats() {
@@ -628,6 +629,95 @@ function updateAdminStats() {
     document.getElementById('todayRegistrations').textContent = todayRegs;
     document.getElementById('confirmedPayments').textContent = confirmedPayments;
     document.getElementById('monthlyRevenue').textContent = `R$ ${monthlyRevenue}`;
+}
+
+function renderAdminChartsAndInsights() {
+    // Agregar por horário (string schedule: "Dia - 19h")
+    const last7Days = new Date();
+    last7Days.setDate(last7Days.getDate() - 7);
+    const regsLast7 = registrations.filter(reg => {
+        const d = reg.timestamp?.toDate?.() || new Date(reg.timestamp || Date.now());
+        return d >= last7Days;
+    });
+
+    const hourCounts = {};
+    regsLast7.forEach(reg => {
+        const hour = (reg.schedule || '').split(' - ')[1] || '';
+        if (!hour) return;
+        if (!hourCounts[hour]) hourCounts[hour] = { total: 0, paid: 0 };
+        hourCounts[hour].total += 1;
+        if (reg.status === 'confirmed') hourCounts[hour].paid += 1;
+    });
+
+    const byHourLabels = Object.keys(hourCounts).sort((a,b) => parseInt(a) - parseInt(b));
+    const byHourPaid = byHourLabels.map(h => hourCounts[h].paid);
+
+    const ctx = document.getElementById('chartByHour');
+    if (ctx && window.Chart) {
+        if (window._chartByHour) {
+            window._chartByHour.destroy();
+        }
+        window._chartByHour = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: byHourLabels,
+                datasets: [{
+                    label: 'Pagamentos (últimos 7 dias)',
+                    data: byHourPaid,
+                    backgroundColor: 'rgba(249, 115, 22, 0.6)'
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+    }
+
+    // Top dias com mais vendas
+    const dayCounts = {};
+    registrations.forEach(reg => {
+        const d = reg.timestamp?.toDate?.() || new Date(reg.timestamp || Date.now());
+        const key = d.toLocaleDateString('pt-BR');
+        if (!dayCounts[key]) dayCounts[key] = { total: 0, paid: 0 };
+        dayCounts[key].total += 1;
+        if (reg.status === 'confirmed') dayCounts[key].paid += 1;
+    });
+    const topDays = Object.entries(dayCounts)
+        .sort((a,b) => b[1].paid - a[1].paid)
+        .slice(0, 5);
+    const topDaysList = document.getElementById('topDaysList');
+    if (topDaysList) {
+        topDaysList.innerHTML = topDays.map(([day, cnt]) => `<li>${day}: <span class="text-green-400 font-bold">${cnt.paid}</span> pagos</li>`).join('');
+    }
+
+    // Conversão
+    const totalRegs = registrations.length;
+    const paid = registrations.filter(r => r.status === 'confirmed').length;
+    const conversion = totalRegs ? ((paid / totalRegs) * 100).toFixed(1) : '0.0';
+    const bestHour = byHourLabels.reduce((best, h) => {
+        const val = hourCounts[h]?.paid || 0;
+        if (!best || val > best.val) return { h, val };
+        return best;
+    }, null);
+
+    const statTotal = document.getElementById('statTotalRegs');
+    const statPaid = document.getElementById('statPaid');
+    const statConv = document.getElementById('statConversion');
+    const bestHourEl = document.getElementById('bestHour');
+    const todayRevenueEl = document.getElementById('todayRevenue');
+
+    if (statTotal) statTotal.textContent = totalRegs;
+    if (statPaid) statPaid.textContent = paid;
+    if (statConv) statConv.textContent = `${conversion}%`;
+    if (bestHourEl) bestHourEl.textContent = bestHour ? `${bestHour.h} ( ${bestHour.val} pagos )` : '-';
+
+    // Receita estimada hoje
+    const today = new Date().toDateString();
+    const paidToday = registrations.filter(reg => {
+        if (reg.status !== 'confirmed') return false;
+        const d = reg.timestamp?.toDate?.() || new Date(reg.timestamp || Date.now());
+        return d.toDateString() === today;
+    }).length;
+    const todayRevenue = (paidToday * 0.5).toFixed(2);
+    if (todayRevenueEl) todayRevenueEl.textContent = `R$ ${todayRevenue}`;
 }
 
 function showAdminTab(tabName) {
