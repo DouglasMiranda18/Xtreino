@@ -12,7 +12,7 @@ const firebaseConfig = {
 // Mercado Pago Configuration - CONFIGURE SUAS CREDENCIAIS AQUI
 const MERCADO_PAGO_ACCESS_TOKEN = "APP_USR-2213099347690266-092212-ea57e6a3c5868f4d00fdd302c7bcb537-2018162925";
 const MERCADO_PAGO_BASE_URL = "https://api.mercadopago.com"; // base API
-const ADMIN_WHATSAPP = "5511999999999"; // Altere para o WhatsApp oficial
+const ADMIN_WHATSAPP = "5581986103152"; // Altere para o WhatsApp oficial
 
 // Initialize Firebase
 let db;
@@ -465,10 +465,14 @@ function handleMercadoPagoReturn() {
 
     const lastRegistrationId = (() => { try { return localStorage.getItem('lastRegistrationId'); } catch(_) { return null; } })();
     const lastRegistrationData = (() => { try { return JSON.parse(localStorage.getItem('lastRegistrationData') || 'null'); } catch(_) { return null; } })();
+    const paymentId = params.get('payment_id');
     if (mp === 'success') {
         showNotification('Pagamento aprovado! Sua inscrição foi confirmada.', 'success');
         if (db && lastRegistrationId && !lastRegistrationId.startsWith('local-')) {
             db.collection('registrations').doc(lastRegistrationId).update({ status: 'confirmed' }).catch(() => {});
+        }
+        if (paymentId && lastRegistrationId) {
+            fetchAndStorePaymentMethod(paymentId, lastRegistrationId);
         }
     } else if (mp === 'pending') {
         showNotification('Pagamento pendente. Assim que aprovar, confirmaremos sua vaga.', 'info');
@@ -481,6 +485,22 @@ function handleMercadoPagoReturn() {
     try { localStorage.removeItem('lastRegistrationId'); localStorage.removeItem('lastRegistrationData'); } catch(_) {}
     const cleanUrl = window.location.origin + window.location.pathname + window.location.hash;
     window.history.replaceState({}, document.title, cleanUrl);
+}
+
+async function fetchAndStorePaymentMethod(paymentId, registrationId) {
+    try {
+        const res = await fetch(`${MERCADO_PAGO_BASE_URL}/v1/payments/${paymentId}`, {
+            headers: { 'Authorization': `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}` }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const method = data.payment_method_id || data.payment_type_id || 'desconhecido';
+        if (db && registrationId && !registrationId.startsWith('local-')) {
+            await db.collection('registrations').doc(registrationId).update({ paymentMethod: method });
+        }
+    } catch (_) {
+        // silencioso
+    }
 }
 
 function showPendingConfirmationModal(regData) {
