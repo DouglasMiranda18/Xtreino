@@ -618,7 +618,7 @@ function filterTabelas() {
 // Admin functions
 function adminLogin() {
     const password = document.getElementById('adminPassword').value;
-    if (password === 'Teste Freitas') { // Nova senha
+    if (password === 'xtfreitas') { // Nova senha
         isAdminLoggedIn = true;
         document.getElementById('adminLogin').classList.add('hidden');
         document.getElementById('adminPanel').classList.remove('hidden');
