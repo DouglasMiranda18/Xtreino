@@ -37,6 +37,7 @@ try {
 
 // Global variables
 let currentSchedule = null;
+let selectedDate = null; // formato YYYY-MM-DD
 let isAdminLoggedIn = false;
 let registrations = [];
 let ranking = [];
@@ -50,6 +51,7 @@ document.addEventListener('DOMContentLoaded', function() {
     showSection('agenda');
     setupRealtimeListeners();
     handleMercadoPagoReturn();
+    initAgendaDate();
 });
 
 function setupEventListeners() {
@@ -58,6 +60,61 @@ function setupEventListeners() {
         const mobileMenu = document.getElementById('mobileMenu');
         mobileMenu.classList.toggle('hidden');
     });
+    const dateInput = document.getElementById('agendaDate');
+    if (dateInput) {
+        dateInput.addEventListener('change', () => {
+            selectedDate = dateInput.value;
+            updateSelectedDateLabel();
+            updateAgendaDisplay();
+        });
+    }
+}
+
+function initAgendaDate() {
+    const input = document.getElementById('agendaDate');
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth()+1).padStart(2,'0');
+    const d = String(today.getDate()).padStart(2,'0');
+    selectedDate = `${y}-${m}-${d}`;
+    if (input) input.value = selectedDate;
+    updateSelectedDateLabel();
+}
+
+function setSelectedDateToToday() {
+    const input = document.getElementById('agendaDate');
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth()+1).padStart(2,'0');
+    const d = String(today.getDate()).padStart(2,'0');
+    selectedDate = `${y}-${m}-${d}`;
+    if (input) input.value = selectedDate;
+    updateSelectedDateLabel();
+    updateAgendaDisplay();
+}
+
+function setSelectedDateToTomorrow() {
+    const input = document.getElementById('agendaDate');
+    const t = new Date();
+    t.setDate(t.getDate()+1);
+    const y = t.getFullYear();
+    const m = String(t.getMonth()+1).padStart(2,'0');
+    const d = String(t.getDate()).padStart(2,'0');
+    selectedDate = `${y}-${m}-${d}`;
+    if (input) input.value = selectedDate;
+    updateSelectedDateLabel();
+    updateAgendaDisplay();
+}
+
+function updateSelectedDateLabel() {
+    const label = document.getElementById('selectedDateLabel');
+    if (label) label.textContent = formatSelectedDateLabel();
+}
+
+function formatSelectedDateLabel() {
+    if (!selectedDate) return '';
+    const [y,m,d] = selectedDate.split('-');
+    return `${d}/${m}/${y}`;
 }
 
 function setupRealtimeListeners() {
@@ -122,17 +179,22 @@ function showSection(sectionName) {
 }
 
 function loadAgenda() {
-    const days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
     const times = ['19h', '20h', '21h', '22h', '23h'];
     const agendaGrid = document.getElementById('agendaGrid');
     
     agendaGrid.innerHTML = '';
 
-    days.forEach(day => {
+    const dateObj = selectedDate ? new Date(selectedDate + 'T00:00:00') : new Date();
+    const weekDay = days[dateObj.getDay()];
+    const dateLabel = `${String(dateObj.getDate()).padStart(2,'0')}/${String(dateObj.getMonth()+1).padStart(2,'0')}`;
+
+    // Apenas o dia selecionado
+    const day = weekDay;
         times.forEach(time => {
             const schedule = `${day} - ${time}`;
             const occupiedSlots = registrations.filter(reg => 
-                reg.schedule === schedule && reg.status === 'confirmed'
+                reg.schedule === schedule && reg.status === 'confirmed' && reg.date === selectedDate
             ).length;
             const availableSlots = 12 - occupiedSlots;
 
@@ -157,7 +219,7 @@ function loadAgenda() {
                     </div>
                     
                     <div class="space-y-4 mb-8">
-                        <div class="flex justify-between items-center p-3 bg-black/30 rounded-xl">
+                    <div class="flex justify-between items-center p-3 bg-black/30 rounded-xl">
                             <span class="text-gray-300 flex items-center font-semibold"><i class="fas fa-map mr-3 text-orange-500"></i>Bermuda</span>
                             <span class="text-orange-400 font-bold">Queda 1</span>
                         </div>
@@ -177,7 +239,7 @@ function loadAgenda() {
                             <p class="text-3xl font-black text-green-400">R$ 0,50</p>
                         </div>
                         <div class="flex space-x-3">
-                            <button onclick="event.stopPropagation(); openTeamsModal('${schedule}')" class="bg-gray-700 hover:bg-gray-600 text-white px-5 py-4 rounded-xl transition-colors font-black uppercase tracking-wider text-sm">
+                            <button onclick="event.stopPropagation(); openTeamsModal('${schedule}', '${selectedDate || ''}')" class="bg-gray-700 hover:bg-gray-600 text-white px-5 py-4 rounded-xl transition-colors font-black uppercase tracking-wider text-sm">
                                 VER TIMES
                             </button>
                             <button class="${availableSlots === 0 ? 'bg-gray-600 cursor-not-allowed' : 'gradient-bg hover:from-orange-600 hover:to-red-600 glow-effect'} text-white px-8 py-4 rounded-xl transition-all font-black uppercase tracking-wider text-lg" 
@@ -191,24 +253,23 @@ function loadAgenda() {
 
             agendaGrid.appendChild(card);
         });
-    });
 }
 
 function updateAgendaDisplay() {
     loadAgenda();
 }
-function openTeamsModal(schedule) {
+function openTeamsModal(schedule, dateFilter = '') {
     const teams = registrations
-        .filter(reg => reg.schedule === schedule && reg.status === 'confirmed')
+        .filter(reg => reg.schedule === schedule && reg.status === 'confirmed' && (!dateFilter || reg.date === dateFilter))
         .map(reg => reg.teamName)
         .sort((a, b) => a.localeCompare(b));
 
     const content = document.getElementById('teamsContent');
     if (!teams.length) {
-        content.innerHTML = `<p class="text-gray-300">Nenhum time confirmado ainda para <strong class="text-orange-400">${schedule}</strong>.</p>`;
+        content.innerHTML = `<p class="text-gray-300">Nenhum time confirmado ainda para <strong class="text-orange-400">${schedule}</strong> em <strong class="text-orange-400">${formatSelectedDateLabel()}</strong>.</p>`;
     } else {
         content.innerHTML = `
-            <p class="text-gray-300 mb-4">Horário: <strong class="text-orange-400">${schedule}</strong></p>
+            <p class="text-gray-300 mb-4">Horário: <strong class="text-orange-400">${schedule}</strong> • Dia: <strong class="text-orange-400">${formatSelectedDateLabel()}</strong></p>
             <ul class="space-y-2">
                 ${teams.map((name, idx) => `<li class="text-white">${idx + 1}. ${name}</li>`).join('')}
             </ul>
@@ -223,7 +284,7 @@ function closeTeamsModal() {
 
 function openRegistrationModal(schedule) {
     const occupiedSlots = registrations.filter(reg => 
-        reg.schedule === schedule && reg.status === 'confirmed'
+        reg.schedule === schedule && reg.status === 'confirmed' && reg.date === selectedDate
     ).length;
     
     if (occupiedSlots >= 12) {
@@ -232,7 +293,7 @@ function openRegistrationModal(schedule) {
     }
 
     currentSchedule = schedule;
-    document.getElementById('selectedTime').textContent = schedule;
+    document.getElementById('selectedTime').textContent = `${schedule} - ${formatSelectedDateLabel()}`;
     document.getElementById('registrationModal').classList.remove('hidden');
 }
 
@@ -301,7 +362,8 @@ async function registerTeam(event) {
                     status: 'pending',
                     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                     paymentId: null,
-                    paymentUrl: null
+                    paymentUrl: null,
+                    date: selectedDate
                 };
                 const docRef = await db.collection('registrations').add(registrationData);
                 registrationId = docRef.id;
@@ -318,7 +380,7 @@ async function registerTeam(event) {
                 phone: teamPhone
             },
             value: 0.50,
-            description: `X-Treino HARDKILLS - ${currentSchedule}`,
+            description: `X-Treino HARDKILLS - ${currentSchedule} - ${formatSelectedDateLabel()}`,
             externalReference: registrationId
         });
 
@@ -559,13 +621,13 @@ function displayTabelas() {
     const tabelaFilter = document.getElementById('tabelaFilter');
     
     // Update filter options
-    const schedules = [...new Set(results.map(r => r.schedule))];
+    const schedules = [...new Set(results.filter(r => !selectedDate || r.date === selectedDate).map(r => r.schedule))];
     tabelaFilter.innerHTML = '<option value="">Todos os horários</option>' + 
         schedules.map(schedule => `<option value="${schedule}">${schedule}</option>`).join('');
 
     // Group results by schedule and map
     const groupedResults = {};
-    results.forEach(result => {
+    results.filter(r => !selectedDate || r.date === selectedDate).forEach(result => {
         const key = `${result.schedule} - ${result.map}`;
         if (!groupedResults[key]) {
             groupedResults[key] = [];
@@ -789,7 +851,7 @@ function loadAdminInscricoes() {
             <td class="px-6 py-4 font-bold">${reg.teamName}</td>
             <td class="px-6 py-4">${reg.phone}</td>
             <td class="px-6 py-4">${reg.email}</td>
-            <td class="px-6 py-4 font-semibold">${reg.schedule}</td>
+            <td class="px-6 py-4 font-semibold">${reg.schedule}${reg.date ? ' • ' + reg.date : ''}</td>
             <td class="px-6 py-4">
                 <span class="status-badge ${reg.status === 'confirmed' ? 'status-confirmed' : reg.status === 'processing' ? 'status-processing' : 'status-pending'}">
                     ${reg.status === 'confirmed' ? 'Confirmado' : reg.status === 'processing' ? 'Processando' : 'Pendente'}
@@ -844,7 +906,7 @@ async function removeRegistration(registrationId) {
 }
 
 function populateResultSchedules() {
-    const schedules = [...new Set(registrations.filter(reg => reg.status === 'confirmed').map(reg => reg.schedule))];
+    const schedules = [...new Set(registrations.filter(reg => reg.status === 'confirmed' && reg.date === selectedDate).map(reg => reg.schedule))];
     const select = document.getElementById('resultSchedule');
     select.innerHTML = '<option value="">Selecionar Horário</option>' + 
         schedules.map(schedule => `<option value="${schedule}">${schedule}</option>`).join('');
@@ -875,7 +937,8 @@ async function launchResult(event) {
             position,
             kills,
             points: totalPoints,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            date: selectedDate
         });
 
         // Update ranking
